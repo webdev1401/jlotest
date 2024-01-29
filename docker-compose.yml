@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+  mysql:
+    image: mysql:8.3
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: always
+    volumes:
+      - ./var/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: jlotest
+      MYSQL_USER: ammar
+      MYSQL_PASSWORD: superdev
+
+  php:
+    image: php:8.2-apache
+    volumes:
+      - ./:/var/www/html
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html/public
+    depends_on:
+      - mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - '8080:80'
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: rootpassword
+    depends_on:
+      - mysql
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    depends_on:
+      - php
+    entrypoint: '/bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"'
