@@ -2,8 +2,8 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Notifiable;
 use App\Entity\Notification;
-use App\Entity\NotificationUser;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
@@ -15,19 +15,24 @@ class AppFixtures extends Fixture
         $faker = Factory::create();
         $type = ['LINK', 'CLICK', 'NONE'];
         for ($i = 0; $i < 20; $i++) {
-            $notification = (new Notification)
+            $userId = rand(1, 15);
+            $notification = (new Notification())
             ->setType($type[rand(0,2)])
             ->setSujet($faker->sentence())
-            ->setDescription($faker->sentence());
+            ->setDescription($faker->sentence())
+            ->setLu(rand(0, 1));
             
-            $notificationUser = (new NotificationUser)
-            ->setNotificationId($notification->getId())
-            ->setUserId(rand(1, 15));
-
             $manager->persist($notification);
-            $manager->persist($notificationUser);
+            $manager->flush();
+            
+            $notifiable = (new Notifiable())
+            ->setNotification($notification)
+            ->setNotifiableId($userId)
+            ->setNotifiableType('User');
+            
+            $manager->persist($notifiable);
+            $manager->flush();
         }
 
-        $manager->flush();
     }
 }
