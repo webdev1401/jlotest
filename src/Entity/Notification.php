@@ -2,10 +2,73 @@
 
 namespace App\Entity;
 
-use App\Repository\NotificationRepository;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GraphQl\Query;
+use App\Resolver\CreateForUserResolver;
+use App\Resolver\UpdateForReadResolver;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use App\Repository\NotificationRepository;
+use Doctrine\Common\Collections\Collection;
+use App\Resolver\NotificationsByUserResolver;
+use App\Resolver\NotificationsUnreadResolver;
+use ApiPlatform\Metadata\GraphQl\DeleteMutation;
+use Doctrine\Common\Collections\ArrayCollection;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
+use App\Resolver\NotificationsByReadStateResolver;
 
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
+#[ApiResource(
+    graphQlOperations: [
+        new Query(),
+        new QueryCollection(),
+        new Mutation(name: 'create'),
+        new Mutation(name: 'update'),
+        new DeleteMutation(name: 'delete'),
+        new QueryCollection(
+            name: 'notificationByUser',
+            resolver: NotificationsByUserResolver::class,
+            paginationEnabled: false,
+            read: false,
+            args: [
+                'users' => ['type' => '[Int]!'],
+            ]
+        ),
+        new QueryCollection(
+            name: 'notificationByReadState',
+            resolver: NotificationsByReadStateResolver::class,
+            paginationEnabled: false,
+            read: false,
+            args: [
+                'lu' => ['type' => 'Boolean!'],
+            ]
+        ),
+        new QueryCollection(
+            name: 'notificationUnread',
+            resolver: NotificationsUnreadResolver::class,
+            paginationEnabled: false,
+            read: false,
+        ),
+        new Mutation(
+            name: 'createForUser',
+            resolver: CreateForUserResolver::class,
+            args: [
+                'userid' => ['type' => '[Int]!'],
+                'type' => ['type' => 'String!'],
+                'sujet' => ['type' => 'String!'],
+                'description' => ['type' => 'String!'],
+                'action' => ['type' => 'String'],
+            ]
+        ),
+        new Mutation(
+            name: 'updateForRead',
+            resolver: UpdateForReadResolver::class,
+            args: [
+                'id' => ['type' => 'ID!'],
+            ]
+        )
+    ]
+)]
 class Notification
 {
     #[ORM\Id]
@@ -26,7 +89,15 @@ class Notification
     private ?string $action = null;
 
     #[ORM\Column]
-    private ?bool $etat = false;
+    private ?bool $lu = false;
+
+    #[ORM\OneToMany(mappedBy: 'notification', targetEntity: Notifiable::class, orphanRemoval: true)]
+    private Collection $notifiable;
+
+    public function __construct()
+    {
+        $this->notifiable = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -81,14 +152,44 @@ class Notification
         return $this;
     }
 
-    public function isEtat(): ?bool
+    public function isLu(): ?bool
     {
-        return $this->etat;
+        return $this->lu;
     }
 
-    public function setEtat(bool $etat): static
+    public function setLu(bool $lu): static
     {
-        $this->etat = $etat;
+        $this->lu = $lu;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Notifiable>
+     */
+    public function getNotifiable(): Collection
+    {
+        return $this->notifiable;
+    }
+
+    public function addNotifiable(Notifiable $notifiable): static
+    {
+        if (!$this->notifiable->contains($notifiable)) {
+            $this->notifiable->add($notifiable);
+            $notifiable->setNotification($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotifiable(Notifiable $notifiable): static
+    {
+        if ($this->notifiable->removeElement($notifiable)) {
+            // set the owning side to null (unless already changed)
+            if ($notifiable->getNotification() === $this) {
+                $notifiable->setNotification(null);
+            }
+        }
 
         return $this;
     }
