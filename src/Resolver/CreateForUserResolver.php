@@ -13,9 +13,16 @@ class CreateForUserResolver implements MutationResolverInterface
     {
     }
 
-    public function __invoke(?object $item, array $context): ?object
+    /**
+     * Create notification object
+     *
+     * @param Notification|null $item
+     * @param array $context
+     * @return Notification|null
+     */
+    public function __invoke(?object $notification, array $context): ?object
     { 
-        $notification = (new Notification)
+        $notification
             ->setType($context['args']['input']['type'])
             ->setDescription($context['args']['input']['description'])
             ->setSujet($context['args']['input']['sujet'])

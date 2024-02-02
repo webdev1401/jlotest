@@ -52,12 +52,14 @@ use App\Resolver\NotificationsByReadStateResolver;
         new Mutation(
             name: 'createForUser',
             resolver: CreateForUserResolver::class,
+            write: false,
             args: [
                 'userid' => ['type' => '[Int]!'],
                 'type' => ['type' => 'String!'],
                 'sujet' => ['type' => 'String!'],
                 'description' => ['type' => 'String!'],
                 'action' => ['type' => 'String'],
+                'lu' => ['type' => 'Boolean'],
             ]
         ),
         new Mutation(
