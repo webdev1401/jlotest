@@ -1,8 +1,11 @@
 version: '3.7'
 
+networks:
+  mynet:
+
 services:
   mysql:
-    image: mysql:8.3
+    image: mysql:5.7
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     restart: always
     volumes:
@@ -12,15 +15,22 @@ services:
       MYSQL_DATABASE: jlotest
       MYSQL_USER: ammar
       MYSQL_PASSWORD: superdev
+    networks:
+      - mynet
 
   php:
     image: php:8.2-apache
     volumes:
       - ./:/var/www/html
+      - ./var/docker/apache/symfony.conf:/etc/apache2/sites-available/000-default.conf
     environment:
       APACHE_DOCUMENT_ROOT: /var/www/html/public
+    ports:
+      - '80:80'
     depends_on:
       - mysql
+    networks:
+      - mynet
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -32,6 +42,8 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
     depends_on:
       - mysql
+    networks:
+      - mynet
 
   certbot:
     image: certbot/certbot
@@ -41,3 +53,5 @@ services:
     depends_on:
       - php
     entrypoint: '/bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"'
+    networks:
+      - mynet
